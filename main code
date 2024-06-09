@@ -1,0 +1,270 @@
+#include <avr/io.h>
+
+#include <avr/interrupt.h>
+
+void pid();
+
+double csa = 0, psa = 0, csb = 0, psb = 0;
+
+float n = 0, s, kp = 20, kd = 900;
+
+int a = 0, count = 0, error, etdt, p, d, pe;
+
+
+
+
+
+int main() {
+
+
+
+  init();
+
+  DDRE &= ~(1 << PE4) | (1 << PE5);
+
+  PORTE |= (1 << PE4) | (1 << PE5);
+
+  EICRB |= (1 << ISC40) | (1 << ISC50);
+
+  EIMSK |= (1 << INT4) | (1 << INT5);
+
+
+
+  DDRH |= (1 << PH6);
+
+  DDRH |= (1 << PH5);
+
+  TCCR4A = 0xAA;
+
+  TCCR4B = 0x19;
+
+  ICR4 = 1000;
+
+
+
+  Serial.begin(9600);
+
+
+
+
+
+  while (1) {
+
+
+
+    if (Serial.available()) {
+
+      n = Serial.parseFloat();
+
+    }
+
+
+
+    a = ((n * 1300.00) / 360.00);
+
+
+
+    pid();
+
+
+
+    dir(error);
+
+    if ((error == 0) || (error == -1) || (error == 1) || (error == -2) || (error == 2)) {
+
+      OCR4C = 0;
+
+    }
+
+    else {
+
+      OCR4C = s;
+
+    }
+
+    Serial.print(a);
+
+    Serial.print("  ");
+
+    //        Serial.print(error);
+
+    //        Serial.print("  ");
+
+    Serial.println(count);
+
+  }
+
+}
+
+
+
+void dir(int diff) {
+
+  if (diff > 0) PORTH |= 0x40;
+
+  else PORTH &= ~0x40;
+
+}
+
+
+
+void pid() {
+
+  error = a - count;
+
+  etdt = (error - pe);
+
+  p = kp * error;
+
+  d = kd * etdt;
+
+  s = 1000 + p + d;
+
+  pe = error;
+
+}
+
+
+
+ISR(INT5_vect) {
+
+
+
+  csa = ~PINE & 0x10;
+
+  csb = ~PINE & 0x20;
+
+
+
+  if (csa != psa) {
+
+    if (csa != csb) {
+
+      count++;
+
+    } else {
+
+      count--;
+
+    }
+
+  } else {
+
+    if (csa == csb) {
+
+      count++;
+
+    } else {
+
+      count--;
+
+    }
+
+  }
+
+  if (csb != psb) {
+
+    if (csb == csa) {
+
+      count++;
+
+    } else {
+
+      count--;
+
+    }
+
+  } else {
+
+    if (csb != csa) {
+
+      count++;
+
+    } else {
+
+      count--;
+
+    }
+
+  }
+
+
+
+  psa = csa;
+
+  psb = csb;
+
+}
+
+
+
+ISR(INT4_vect) {
+
+
+
+  csa = ~PINE & 0x10;
+
+  csb = ~PINE & 0x20;
+
+
+
+  if (csa != psa) {
+
+    if (csa != csb) {
+
+      count++;
+
+    } else {
+
+      count--;
+
+    }
+
+  } else {
+
+    if (csa == csb) {
+
+      count++;
+
+    } else {
+
+      count--;
+
+    }
+
+  }
+
+  if (csb != psb) {
+
+    if (csb == csa) {
+
+      count++;
+
+    } else {
+
+      count--;
+
+    }
+
+  } else {
+
+    if (csb != csa) {
+
+      count++;
+
+    } else {
+
+      count--;
+
+    }
+
+  }
+
+
+
+  psa = csa;
+
+  psb = csb;
+
+}
+
